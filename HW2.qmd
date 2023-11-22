@@ -1,0 +1,161 @@
+---
+title: "STAT570 HW2"
+author: "Miray Çınar"
+format: html
+editor: visual
+---
+
+## 15.4.6 Grouping and capturing
+
+First install the required packages:
+
+```{r}
+# install.packages("tidyverse")
+# install.packages("babynames")
+
+library(tidyverse)
+library(babynames)
+```
+
+#### Grouping:
+
+In regular expressions, parentheses () are used to create groups. They capture the part of the string that matches the pattern in the parentheses.
+
+Backreferences: These references, like \\1, \\2, etc., refer back to the contents of the corresponding back reference:
+
+`\1` refers to the match contained in the first parenthesis, `\2` in the second parenthesis, and so on.
+
+For example, the following pattern finds all fruits that have a repeated pair of letters in it:
+
+```{r}
+str_view(fruit, "(..)\\1")
+```
+
+Extra example:
+
+In this one we see that it search for pattern that fruits that have the same consecutive letters:
+
+```{r}
+str_view(fruit, "(.)\\1")
+```
+
+This regex pattern finds the words that start and end with the same pair of letters.
+
+```{r}
+str_view(words, "^(..).*\\1$")
+```
+
+So, how does this work?
+
+`^(..)`: The pattern starts by matching any two characters at the beginning of the word and captures them in the first group.
+
+`.*`: This matches any number of characters in between the start and end pairs.
+
+`\1$`: Ensures that the string ends with the same pair of characters that were captured at the beginning.
+
+Extra example:
+
+```{r}
+str_view(fruit, "^(..).*\\1$")
+```
+
+We can also use back references in `str_replace()`.
+
+First look into the dataset:
+
+```{r}
+head(sentences)
+```
+
+```{r}
+sentences |> 
+  str_replace("(\\w+) (\\w+) (\\w+)", "\\1 \\3 \\2") |> 
+  str_view()
+```
+
+The output would show the sentences where the second and third words have swapped positions, effectively altering the sentence structure while maintaining the first word unchanged.
+
+The regex pattern `"(\w+) (\w+) (\w+)"` is used to match three words in a sentence. Each `(\w+)` captures a word.
+
+`\1 \3 \2`: This is the replacement pattern.
+
+\\1, \\2, and \\3 refer to the first, second, and third captured groups from the regex pattern.
+
+By rearranging the order of the back references `\1, \3, \2,` it switches the positions of the second and third words while keeping the first word unchanged.
+
+Extra example:
+
+```{r}
+exsentences <- c("I solemnly swear I am up to no good.", 
+                 "Things we lose have a way of coming back to us in the end, if not always in the way we expect",
+                 "It does not do to dwell on dreams and forget to live")
+```
+
+```{r}
+switched_sentences <- exsentences %>%
+  str_replace("(\\w+) (\\w+) (\\w+)", "\\1 \\3 \\2")
+
+switched_sentences
+```
+
+If you want to extract the matches for each group you can use str_match(). This pattern seems to be looking for a string that starts with "`the`" and is followed by two groups of one or more word characters (denoted by `\w+`), separated by a space.
+
+```{r}
+sentences |> 
+  str_match("the (\\w+) (\\w+)") |> 
+  head()
+
+```
+
+But `str_match()` returns a matrix, so it's not particularly easy to work with. You could convert to a tibble and name the columns:
+
+```{r}
+sentences |> 
+  str_match("the (\\w+) (\\w+)") |> 
+  as_tibble(.name_repair = "minimal") |> 
+  set_names("match", "word1", "word2")
+```
+
+`str_match()` function is applied to each sentence in the dataset based on the provided regex pattern.
+
+`as_tibble(.name_repair = "minimal")` : The output of str_match() (which is a matrix) is converted to a tibble (data frame). `.name_repair = "minimal"` is an argument used in `as_tibble()` to control the way column names are repaired in case they are invalid or duplicated.
+
+`set_names("match", "word1", "word2")`: The column names of the resulting tibble are explicitly set using set_names().
+
+Finally we can use parantheses without creating matching groups.
+
+```{r}
+x <- c("a gray cat", "a grey dog")
+str_match(x, "gr(e|a)y")
+```
+
+The overall pattern matches "grey" or "gray" where the letter between "gr" and "y" can be either "e" or "a".
+
+Within the regex pattern, `(e|a)` is a capturing group.
+
+`|`represents an OR operator, allowing the pattern to match either "e" or "a".
+
+Non-Capturing Group `(?:)`:
+
+The use of `(?:)` within the regex pattern creates a non-capturing group. In this case, the non-capturing group `(?:e|a)` matches either "e" or "a" without capturing this part of the match separately. It's used for grouping without creating a capture group explicitly.
+
+```{r}
+str_match(x, "gr(?:e|a)y")
+```
+
+The crucial aspect here is the `(?:)` used in the regex pattern. It signifies a non-capturing group, meaning the pattern inside it `(e|a)` will match either "e" or "a" but won't be captured as a separate group in the output.
+
+Extra example:
+
+```{r}
+gardrobe <- c("tshirt is blue.", "skirt is yellow", "scarf is red")
+
+# Search for matches
+matches <- str_match(gardrobe, "(skirt|scarf) is (?:\\w+)")
+matches
+
+```
+
+`(skirt|scarf)` captures either "skirt" or "scarf". is matches the word "is". `(?:\w+)` is a non-capturing group `(?:)` matching any additional word (`\w+` represents one or more word characters).
+
+The non-capturing group `(?:\w+)` ensures that the additional word is matched without being captured separately.
